@@ -1,4 +1,4 @@
-package org.dsandler.apps.markers.ui.theme
+package com.google.android.apps.markers.compose.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.MaterialTheme

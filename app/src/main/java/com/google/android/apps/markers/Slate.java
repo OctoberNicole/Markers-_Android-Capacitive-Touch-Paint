@@ -37,7 +37,6 @@ public class Slate extends View {
     
     public static final boolean HWLAYER = true;
     public static final boolean SWLAYER = false;
-    public static final boolean FANCY_INVALIDATES = false; // doesn't work
     public static final boolean INVALIDATE_ALL_THE_THINGS = true; // invalidate() every frame
 
     public static final int FLAG_DEBUG_STROKES = 1;
@@ -103,8 +102,6 @@ public class Slate extends View {
 
     private boolean mEmpty;
 
-    private Region mDirtyRegion = new Region();
-
     private Paint mBlitPaint;
     private Paint mWorkspacePaint;
     private Matrix mZoomMatrix = new Matrix();
@@ -113,7 +110,7 @@ public class Slate extends View {
     private int mMemClass;
     private boolean mLowMem;
 
-    private int mPenColor, mSaveColor;
+    private int mPenColor = Color.BLACK, mSaveColor;
     private int mLastButtons;
     private int mToolsInUse;
     private ZoomController mZoomController;
@@ -290,9 +287,6 @@ public class Slate extends View {
         
         public int getPenType() {
             return mPenType;
-        }
-
-        public void setDebugMode(boolean debug) {
         }
 
         public void reset() {
@@ -611,7 +605,7 @@ public class Slate extends View {
     public void setDebugFlags(int f) {
         if (f != mDebugFlags) {
             mDebugFlags = f;
-            mTiledCanvas.setDebug(0 != (f & FLAG_DEBUG_TILES));
+            if (mTiledCanvas != null) mTiledCanvas.setDebug(0 != (f & FLAG_DEBUG_TILES));
             invalidate();
         }
     }
@@ -839,7 +833,7 @@ public class Slate extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         if (mTiledCanvas != null) {
-            canvas.save(Canvas.MATRIX_SAVE_FLAG);
+            canvas.save();
 
             if (mPanX != 0 || mPanY != 0 || !mZoomMatrix.isIdentity()) {
                 canvas.translate(mPanX, mPanY);
@@ -851,10 +845,6 @@ public class Slate extends View {
                 canvas.drawRect(-20000, mTiledCanvas.getHeight(), 20000, 20000, mWorkspacePaint);
             }
             
-            if (!mDirtyRegion.isEmpty()) {
-                canvas.clipRegion(mDirtyRegion);
-                mDirtyRegion.setEmpty();
-            }
             // TODO: tune this threshold based on the device density
             mBlitPaint.setFilterBitmap(getScale(mZoomMatrix) < 3f);
             mTiledCanvas.drawTo(canvas, 0, 0, mBlitPaint, false); // @@ set to true for dirty tile updates
@@ -996,7 +986,7 @@ public class Slate extends View {
             Log.v(TAG, String.format("buttons=0x%08x, diff=0x%08x", mButtons, diffButtons));
         }
 
-        if (mZoomController.isZooming()) {
+        if (mZoomController != null && mZoomController.isZooming()) {
             // We're in zoom mode but somehow got the touch event, probably because the user is
             // in stylus zoom. Hand off the touch event.
             return mZoomController.onZoomTouchEvent(event);
@@ -1153,9 +1143,6 @@ public class Slate extends View {
         tmpDirtyRect.inset((int)-INVALIDATE_PADDING,(int)-INVALIDATE_PADDING);
         if (INVALIDATE_ALL_THE_THINGS) {
             invalidate();
-        } else if (FANCY_INVALIDATES) {
-            mDirtyRegion.union(tmpDirtyRect);
-            invalidate(); // enqueue invalidation
         } else {
             invalidate(tmpDirtyRect);
         }
