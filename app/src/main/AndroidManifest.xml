@@ -13,7 +13,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.dsandler.apps.markers" android:versionCode="02000000" android:versionName="2.0-PROTO">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    android:versionCode="02000000" android:versionName="2.0-PROTO">
     <uses-sdk android:targetSdkVersion="0" android:minSdkVersion="0" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <supports-screens android:anyDensity="true"/>
@@ -35,7 +36,13 @@
             </intent-filter>
             
         </activity>
-        <activity android:name="com.google.android.apps.markers.compose.MarkersBoard" android:label="Markers (Compose)" android:configChanges="orientation|screenSize" android:exported="true">
+        <activity android:name="com.google.android.apps.markers.compose.MarkersBoard"
+            android:icon="@drawable/icon"
+            android:label="Markers (Compose)"
+            android:configChanges="orientation|screenLayout|screenSize|density"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
+            android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
