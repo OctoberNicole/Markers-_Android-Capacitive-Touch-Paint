@@ -43,14 +43,11 @@ class MarkersBoard : ComponentActivity() {
 
         setContent {
             MarkersTheme {
-                // Do not remove this Surface or MarkersSlateView will drop to 10fps.
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    MarkersSlateView(vm)
-                }
-                Palette(viewModel = vm,
-                    modifier = Modifier.wrapContentSize(align = Alignment.TopCenter))
+                MarkersSlateView(vm)
+                Palette(
+                    viewModel = vm,
+                    modifier = Modifier.wrapContentSize(align = Alignment.TopCenter)
+                )
             }
         }
     }
@@ -78,7 +75,9 @@ fun MarkersBoardPreview() {
 @Composable
 fun MarkersSlateView(viewModel: MarkersBoardViewModel) {
     AndroidView(
-        modifier = Modifier.fillMaxSize(), // Occupy the max size in the Compose UI tree
+        modifier = Modifier
+//            .graphicsLayer()
+            .fillMaxSize(), // Occupy the max size in the Compose UI tree
         factory = { context ->
             Slate(context).also { view ->
                 view.setBackgroundColor(android.graphics.Color.RED)
