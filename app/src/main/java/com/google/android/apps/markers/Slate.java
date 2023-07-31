@@ -115,6 +115,7 @@ public class Slate extends View {
     private int mToolsInUse;
     private ZoomController mZoomController;
     private int mButtons;
+    private long mLastFrameTime;
 
     public interface SlateListener {
         void strokeStarted();
@@ -693,7 +694,6 @@ public class Slate extends View {
         c.drawColor(0x40FFFFFF);
         c.drawBitmap(mStrokeDebugGraph, x, y, null);
         c.restore();
-        invalidate(graphRect);
     }
 
     public void commitStroke() {
@@ -832,6 +832,8 @@ public class Slate extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        final long now = System.currentTimeMillis();
+
         if (mTiledCanvas != null) {
             canvas.save();
 
@@ -859,8 +861,9 @@ public class Slate extends View {
             }
         }
 
+        final float dp = getContext().getResources().getDisplayMetrics().density;
+
         if (DEBUG_SHOW_TOOL_TYPE) {
-            final float dp = getContext().getResources().getDisplayMetrics().density;
             StringBuilder sb = new StringBuilder();
             if ((mToolsInUse & (1<<MotionEvent.TOOL_TYPE_STYLUS)) != 0)
                 sb.append("STYLUS ");
@@ -885,6 +888,17 @@ public class Slate extends View {
                         mDebugPaints[4]);
             }
         }
+
+        if (mDebugFlags != 0) {
+            canvas.drawText(
+                    String.format("%d fps",
+                            (int) (1000f/(now - mLastFrameTime))),
+                    canvas.getWidth() - 100 * dp,
+                    canvas.getHeight() - 48 * dp,
+                    mDebugPaints[4]);
+        }
+
+        mLastFrameTime = now;
     }
 
     private static final float[] mvals = new float[9];
