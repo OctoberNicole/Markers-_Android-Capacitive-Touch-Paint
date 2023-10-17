@@ -42,7 +42,8 @@ class MarkersBoard : ComponentActivity() {
         val vm = MarkersBoardViewModel()
 
         setContent {
-            MarkersTheme {
+            //MarkersTheme
+            Box {
                 MarkersSlateView(vm)
                 Palette(
                     viewModel = vm,
@@ -59,14 +60,15 @@ fun MarkersBoardPreview() {
     val vm = MarkersBoardViewModel()
 
     MarkersTheme {
-        Image(
-            painter = BitmapPainter(
-                ImageBitmap.imageResource(id = R.drawable.icon)
-            ),
-            contentDescription = "Markers logo",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit,
-        )
+        MarkersSlateView(vm)
+//        Image(
+//            painter = BitmapPainter(
+//                ImageBitmap.imageResource(id = R.drawable.icon)
+//            ),
+//            contentDescription = "Markers logo",
+//            modifier = Modifier.fillMaxSize(),
+//            contentScale = ContentScale.Fit,
+//        )
         Palette(viewModel = vm,
             modifier = Modifier.wrapContentSize(align = Alignment.TopCenter))
     }
@@ -84,11 +86,11 @@ fun MarkersSlateView(viewModel: MarkersBoardViewModel) {
                 view.setDrawingBackground(android.graphics.Color.YELLOW)
                 view.addOnAttachStateChangeListener(
                     object : OnAttachStateChangeListener {
-                        override fun onViewAttachedToWindow(v: View?) {
+                        override fun onViewAttachedToWindow(v: View) {
                             view.debugFlags = Slate.FLAG_DEBUG_EVERYTHING
                         }
 
-                        override fun onViewDetachedFromWindow(v: View?) {
+                        override fun onViewDetachedFromWindow(v: View) {
                         }
                     })
             }
