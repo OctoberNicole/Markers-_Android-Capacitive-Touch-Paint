@@ -28,26 +28,36 @@ import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import androidx.lifecycle.viewModelScope
+import com.google.android.apps.markers.ToolButton
 import kotlinx.coroutines.launch
+import kotlin.math.max
+import kotlin.math.min
 
 val HYPER_LINE_THICKNESS = 4.dp
 
 @Composable
-fun Palette(modifier: Modifier = Modifier.wrapContentSize(), viewModel: MarkersBoardViewModel) {
+fun Palette(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(
         modifier = modifier
             .hyperBorder(
@@ -57,13 +67,49 @@ fun Palette(modifier: Modifier = Modifier.wrapContentSize(), viewModel: MarkersB
                 style = HyperStyle.Rounded)
             .background(color = Color(0xFFCCCCCC))
             .padding(12.dp)
-
     ) {
+        content()
+    }
+}
+
+@Composable
+fun PenSizeButton(
+    widthMin: Float,
+    widthMax: Float,
+    viewModel: MarkersBoardViewModel,
+    modifier: Modifier = Modifier,
+) {
+    var m = modifier
+        .background(color = Color.White)
+        .drawBehind {
+            //drawCircle(color = Color.Yellow, center = center, radius = 100.dp.toPx())
+            drawCircle(color = Color(0f, 0f, 0f, 0.5f), radius = min(widthMax, 24.dp.toPx()), center = center)
+            drawCircle(color = Color.Black, radius = max(widthMin, 1.dp.toPx()), center = center)
+        }
+    if (viewModel.penState.widthMin == widthMin && viewModel.penState.widthMax == widthMax) {
+        val borderWidth = 6.dp
+        m = m.border(
+            width = borderWidth,
+            color = Color.Black,
+            shape = RoundedCornerShape(3.dp)
+        )
+    }
+    SmallButton(
+        modifier = m,
+        onClick = {
+            viewModel.penState = viewModel.penState.copy(
+                widthMin = widthMin,
+                widthMax = widthMax)
+        }
+    )
+}
+@Composable
+fun PenPalette(modifier: Modifier = Modifier, viewModel: MarkersBoardViewModel) {
+    Palette(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ColorSwatch(color = Color.Black, viewModel = viewModel)
-            ColorSwatch(color = Color.White, viewModel = viewModel)
-            ColorSwatch(color = Color.Red, viewModel = viewModel)
-            ColorSwatch(color = Color.Blue, viewModel = viewModel)
+            PenSizeButton(4f, 8f, viewModel)
+            PenSizeButton(1f, 25f, viewModel)
+            PenSizeButton(12f, 48f, viewModel)
         }
     }
 }
@@ -73,6 +119,8 @@ fun ColorSwatch(
     color: Color,
     viewModel: MarkersBoardViewModel,
     modifier: Modifier = Modifier,
+    height: Dp = 36.dp,
+    width: Dp = 48.dp,
 ) {
     var m = modifier
         .background(color)
@@ -86,6 +134,8 @@ fun ColorSwatch(
     }
     SmallButton(
         modifier = m,
+        height = height,
+        width = width,
         onClick = {
             viewModel.penState = viewModel.penState.copy(color = color)
         }
@@ -93,16 +143,48 @@ fun ColorSwatch(
 }
 
 @Composable
+fun ColorPalette(modifier: Modifier = Modifier, viewModel: MarkersBoardViewModel) {
+    Palette(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            val grays = floatArrayOf(0.25f, 0.5f, 0.75f)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                ColorSwatch(color = Color.Black, viewModel = viewModel)
+                grays.forEach { l ->
+                    ColorSwatch(color = Color.hsl(0f, 0f, l), viewModel = viewModel)
+                }
+                ColorSwatch(color = Color.White, viewModel = viewModel)
+            }
+            val lvalues = floatArrayOf(0.25f, 0.5f, 0.75f, 0.82f, 0.9f)
+            val hues = floatArrayOf(
+                0f, 30f, 60f, 120f, 240f, 300f
+                )
+            hues.forEach { h ->
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    lvalues.forEach { l ->
+                        ColorSwatch(
+                            color = Color.hsl(h, 1f, l),
+                            viewModel = viewModel)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun SmallButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    height: Dp = 48.dp,
+    width: Dp = 48.dp,
+    cornerRadius: Dp = 4.dp,
     content: @Composable () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
-            .width(48.dp)
-            .height(48.dp)
-            .clip(RoundedCornerShape(4.dp))
+            .width(width)
+            .height(height)
+            .clip(RoundedCornerShape(cornerRadius))
             .clickable(onClick = onClick)
             .then(modifier)
     ) {
@@ -112,10 +194,23 @@ fun SmallButton(
 
 @Preview(
     showBackground = false,
-    widthDp = 500,
-    heightDp = 100,
+    widthDp = 300,
+    heightDp = 500,
 )
 @Composable
 fun PalettePreview() {
-    Palette(viewModel = MarkersBoardViewModel())
+    Box {
+        PenPalette(
+            modifier = Modifier
+                .wrapContentSize()
+                .align(Alignment.TopStart),
+            viewModel = MarkersBoardViewModel()
+        )
+        ColorPalette(
+            modifier = Modifier
+                .wrapContentSize()
+                .align(Alignment.BottomStart),
+            viewModel = MarkersBoardViewModel()
+        )
+    }
 }

@@ -21,9 +21,11 @@ import android.view.View
 import android.view.View.OnAttachStateChangeListener
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,9 +34,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModel
 import com.google.android.apps.markers.Slate
 import com.google.android.apps.markers.compose.theme.MarkersTheme
@@ -50,44 +57,100 @@ data class PenState(
 
 class MarkersBoardViewModel() : ViewModel() {
     var penState by mutableStateOf(PenState())
+    var eraseRequested by mutableStateOf(true)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MarkersScene() {
+    val vm = MarkersBoardViewModel()
+
+    MarkersSlateView(viewModel = vm)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Palette(modifier = Modifier
+            .safeContentPadding()
+            .wrapContentSize()
+            .align(Alignment.TopEnd)
+        ) {
+            SmallButton(onClick = {
+                vm.eraseRequested = true
+            }) {
+                Image(
+                    painter = painterResource(R.drawable.scribble),
+                    contentDescription = "Clear",
+                    colorFilter = ColorFilter.tint(Color.Black),
+                    modifier = Modifier
+                        .fillMaxSize()
+                )
+            }
+        }
+        PenPalette(
+            viewModel = vm,
+            modifier = Modifier
+                .safeContentPadding() // will always avoid transient system bars
+                .wrapContentSize()
+                .align(Alignment.TopStart)
+        )
+        ColorPalette(
+            viewModel = vm,
+            modifier = Modifier
+                .safeContentPadding() // will always avoid transient system bars
+                .wrapContentSize(align = Alignment.TopCenter)
+                .align(Alignment.BottomStart)
+        )
+    }
 }
 
 class MarkersBoard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val vm = MarkersBoardViewModel()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        val wiController = WindowInsetsControllerCompat(window, window.decorView)
+
+        // Transient (translucent) status bars will appear on the first swipe, but will not
+        // be interactive until the second touch
+        wiController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        wiController.isAppearanceLightStatusBars = true
+        /*
+        window.decorView.setOnApplyWindowInsetsListener { view, windowInsets ->
+            if (windowInsets.isVisible(WindowInsetsCompat.Type.navigationBars())
+                || windowInsets.isVisible(WindowInsetsCompat.Type.statusBars())) {
+//                binding.toggleFullscreenButton.setOnClickListener {
+//                    // Hide both the status bar and the navigation bar.
+//                    windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+//                }
+
+// if using the default systemBarsBehavior, you'll want this:
+//                view.postDelayed({
+//                     wiController.hide(WindowInsetsCompat.Type.systemBars())
+//                }, 1000L)
+            } else {
+//                binding.toggleFullscreenButton.setOnClickListener {
+//                    // Show both the status bar and the navigation bar.
+//                    windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+//                }
+            }
+            view.onApplyWindowInsets(windowInsets)
+        }
+         */
+
+        wiController.hide(WindowInsetsCompat.Type.systemBars())
 
         setContent {
-            //MarkersTheme
-            Box {
-                MarkersSlateView(vm)
-                Palette(
-                    viewModel = vm,
-                    modifier = Modifier.wrapContentSize(align = Alignment.TopCenter)
-                )
+            MarkersTheme {
+                MarkersScene()
             }
         }
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+//@Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun MarkersBoardPreview() {
-    val vm = MarkersBoardViewModel()
-
     MarkersTheme {
-        MarkersSlateView(vm)
-//        Image(
-//            painter = BitmapPainter(
-//                ImageBitmap.imageResource(id = R.drawable.icon)
-//            ),
-//            contentDescription = "Markers logo",
-//            modifier = Modifier.fillMaxSize(),
-//            contentScale = ContentScale.Fit,
-//        )
-        Palette(viewModel = vm,
-            modifier = Modifier.wrapContentSize(align = Alignment.TopCenter))
+        MarkersScene()
     }
 }
 
@@ -120,6 +183,10 @@ fun MarkersSlateView(viewModel: MarkersBoardViewModel) {
         update = { view ->
             view.setPenColor(viewModel.penState.color.toArgb())
             view.setPenSize(viewModel.penState.widthMin, viewModel.penState.widthMax)
+            if (viewModel.eraseRequested) {
+                view.clear()
+                viewModel.eraseRequested = false
+            }
         },
     )
 }
