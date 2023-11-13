@@ -16,7 +16,7 @@ public class TiledBitmapCanvas implements CanvasLite {
     private static final float INVALIDATE_PADDING = 4.0f;
     public static final int DEFAULT_NUM_VERSIONS = 10;
 
-    private boolean mDebug = true;//false;
+    private boolean mDebug = false;
     private int mTileSize = DEFAULT_TILE_SIZE;
     private int mMaxVersions = DEFAULT_NUM_VERSIONS;
 
