@@ -16,20 +16,25 @@
 
 package com.google.android.apps.markers.compose
 
+import android.graphics.Bitmap
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.View.OnAttachStateChangeListener
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,8 +48,13 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModel
+import com.google.android.apps.markers.MarkersActivity
+import com.google.android.apps.markers.MarkersUtils
+import com.google.android.apps.markers.MediaClient
 import com.google.android.apps.markers.Slate
 import com.google.android.apps.markers.compose.theme.MarkersTheme
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import org.dsandler.apps.markers.R
 
 const val DEBUG = false
@@ -57,7 +67,11 @@ data class PenState(
 
 class MarkersBoardViewModel() : ViewModel() {
     var penState by mutableStateOf(PenState())
-    var eraseRequested by mutableStateOf(true)
+}
+
+enum class ClickEventType {
+    CLEAR,
+    SAVE
 }
 
 @Preview(showBackground = true)
@@ -65,23 +79,39 @@ class MarkersBoardViewModel() : ViewModel() {
 fun MarkersScene() {
     val vm = MarkersBoardViewModel()
 
-    MarkersSlateView(viewModel = vm)
+    val scope = rememberCoroutineScope()
+    val clickEvent = Channel<ClickEventType>(capacity = 1)
+
+    MarkersSlateView(viewModel = vm, onClick = clickEvent)
     Box(modifier = Modifier.fillMaxSize()) {
         Palette(modifier = Modifier
             .safeContentPadding()
             .wrapContentSize()
             .align(Alignment.TopEnd)
         ) {
-            SmallButton(onClick = {
-                vm.eraseRequested = true
-            }) {
-                Image(
-                    painter = painterResource(R.drawable.scribble),
-                    contentDescription = "Clear",
-                    colorFilter = ColorFilter.tint(Color.Black),
-                    modifier = Modifier
-                        .fillMaxSize()
-                )
+            Row {
+                SmallButton(onClick = {
+                    scope.launch { clickEvent.send(ClickEventType.CLEAR) }
+                }) {
+                    Image(
+                        painter = painterResource(R.drawable.scribble),
+                        contentDescription = "Clear",
+                        colorFilter = ColorFilter.tint(Color.Black),
+                        modifier = Modifier
+                            .fillMaxSize()
+                    )
+                }
+                SmallButton(onClick = {
+                    scope.launch { clickEvent.send(ClickEventType.SAVE) }
+                }) {
+                    Image(
+                        painter = painterResource(R.drawable.check),
+                        contentDescription = "Save",
+                        colorFilter = ColorFilter.tint(Color.Black),
+                        modifier = Modifier
+                            .fillMaxSize()
+                    )
+                }
             }
         }
         PenPalette(
@@ -154,16 +184,60 @@ fun MarkersBoardPreview() {
     }
 }
 
+fun saveBitmap(
+    slate: Slate,
+    bitmap: Bitmap,
+    filename: String?,
+    temporary: Boolean,
+    animate: Boolean,
+    share: Boolean,
+    clear: Boolean
+) {
+    MediaClient.saveBitmap(
+        slate.context,
+        bitmap,
+        true,
+        null,
+        -1,
+        -1,
+        filename,
+        temporary,
+        animate,
+        share,
+        clear,
+        slate
+    )
+}
+
+fun saveDrawing(slate: Slate) {
+    if (slate.isEmpty) return
+    //v.isEnabled = false
+    val filename = MarkersUtils.createDrawingFilename()
+    val localBits: Bitmap = slate.copyBitmap(true)
+    saveBitmap(slate, localBits, filename, false, false, false, false)
+    Toast.makeText(slate.context, "Drawing saved: $filename", Toast.LENGTH_SHORT).show()
+    //v.isEnabled = true
+}
+
 @Composable
-fun MarkersSlateView(viewModel: MarkersBoardViewModel) {
+fun MarkersSlateView(viewModel: MarkersBoardViewModel, onClick: Channel<ClickEventType>) {
+    val scope = rememberCoroutineScope()
     AndroidView(
         modifier = Modifier
 //            .graphicsLayer()
             .fillMaxSize()
-            .background(Color.Red)
-            ,
+            .background(Color.Red),
         factory = { context ->
             Slate(context).also { view ->
+                scope.launch {
+                    //onClick.consume {
+                    for (event in onClick) {
+                        when (event) {
+                            ClickEventType.CLEAR -> view.clear()
+                            ClickEventType.SAVE -> saveDrawing(view)
+                        }
+                    }
+                }
                 view.background = context.getDrawable(R.drawable.transparent)
                 if (DEBUG) {
                     view.setBackgroundColor(android.graphics.Color.RED)
@@ -183,10 +257,6 @@ fun MarkersSlateView(viewModel: MarkersBoardViewModel) {
         update = { view ->
             view.setPenColor(viewModel.penState.color.toArgb())
             view.setPenSize(viewModel.penState.widthMin, viewModel.penState.widthMax)
-            if (viewModel.eraseRequested) {
-                view.clear()
-                viewModel.eraseRequested = false
-            }
         },
     )
 }
