@@ -17,6 +17,7 @@
 package com.google.android.apps.markers.compose
 
 import androidx.compose.animation.core.animate
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
@@ -37,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,13 +47,17 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import androidx.lifecycle.viewModelScope
 import com.google.android.apps.markers.ToolButton
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import org.dsandler.apps.markers.R
 import kotlin.math.max
 import kotlin.math.min
 
@@ -170,6 +177,40 @@ fun ColorPalette(modifier: Modifier = Modifier, viewModel: MarkersBoardViewModel
         }
     }
 }
+
+@Composable
+fun ActionPalette(modifier: Modifier = Modifier, viewModel: MarkersBoardViewModel) {
+    val scope = rememberCoroutineScope()
+
+    Palette(modifier = modifier) {
+        Row {
+            SmallButton(onClick = {
+                scope.launch { viewModel.onClick.send(ClickEventType.CLEAR) }
+            }) {
+                Image(
+                    painter = painterResource(R.drawable.scribble),
+                    contentDescription = "Clear",
+                    colorFilter = ColorFilter.tint(Color.Black),
+                    modifier = Modifier
+                        .fillMaxSize()
+                )
+            }
+            SmallButton(onClick = {
+                scope.launch { viewModel.onClick.send(ClickEventType.SAVE) }
+            }) {
+                Image(
+                    painter = painterResource(R.drawable.check),
+                    contentDescription = "Save",
+                    colorFilter = ColorFilter.tint(Color.Black),
+                    modifier = Modifier
+                        .fillMaxSize()
+                )
+            }
+        }
+    }
+
+}
+
 
 @Composable
 fun SmallButton(

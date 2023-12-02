@@ -67,6 +67,7 @@ data class PenState(
 
 class MarkersBoardViewModel() : ViewModel() {
     var penState by mutableStateOf(PenState())
+    var onClick: Channel<ClickEventType> = Channel(capacity = 1)
 }
 
 enum class ClickEventType {
@@ -79,41 +80,15 @@ enum class ClickEventType {
 fun MarkersScene() {
     val vm = MarkersBoardViewModel()
 
-    val scope = rememberCoroutineScope()
-    val clickEvent = Channel<ClickEventType>(capacity = 1)
-
-    MarkersSlateView(viewModel = vm, onClick = clickEvent)
+    MarkersSlateView(viewModel = vm)
     Box(modifier = Modifier.fillMaxSize()) {
-        Palette(modifier = Modifier
-            .safeContentPadding()
-            .wrapContentSize()
-            .align(Alignment.TopEnd)
-        ) {
-            Row {
-                SmallButton(onClick = {
-                    scope.launch { clickEvent.send(ClickEventType.CLEAR) }
-                }) {
-                    Image(
-                        painter = painterResource(R.drawable.scribble),
-                        contentDescription = "Clear",
-                        colorFilter = ColorFilter.tint(Color.Black),
-                        modifier = Modifier
-                            .fillMaxSize()
-                    )
-                }
-                SmallButton(onClick = {
-                    scope.launch { clickEvent.send(ClickEventType.SAVE) }
-                }) {
-                    Image(
-                        painter = painterResource(R.drawable.check),
-                        contentDescription = "Save",
-                        colorFilter = ColorFilter.tint(Color.Black),
-                        modifier = Modifier
-                            .fillMaxSize()
-                    )
-                }
-            }
-        }
+        ActionPalette(
+            viewModel = vm,
+            modifier = Modifier
+                .safeContentPadding()
+                .wrapContentSize()
+                .align(Alignment.TopEnd)
+        )
         PenPalette(
             viewModel = vm,
             modifier = Modifier
@@ -220,7 +195,7 @@ fun saveDrawing(slate: Slate) {
 }
 
 @Composable
-fun MarkersSlateView(viewModel: MarkersBoardViewModel, onClick: Channel<ClickEventType>) {
+fun MarkersSlateView(viewModel: MarkersBoardViewModel) {
     val scope = rememberCoroutineScope()
     AndroidView(
         modifier = Modifier
@@ -230,8 +205,7 @@ fun MarkersSlateView(viewModel: MarkersBoardViewModel, onClick: Channel<ClickEve
         factory = { context ->
             Slate(context).also { view ->
                 scope.launch {
-                    //onClick.consume {
-                    for (event in onClick) {
+                    for (event in viewModel.onClick) {
                         when (event) {
                             ClickEventType.CLEAR -> view.clear()
                             ClickEventType.SAVE -> saveDrawing(view)
