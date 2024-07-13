@@ -16,7 +16,15 @@
 
 package com.google.android.apps.markers.compose
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,7 +47,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,8 +75,12 @@ import kotlin.math.min
 
 val HYPER_LINE_THICKNESS = 4.dp
 
+val enterAnim = expandIn(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+val exitAnim = shrinkOut(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessHigh))
+
 @Composable
 fun Palette(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
     Box(
         modifier = modifier
             .hyperBorder(
@@ -73,9 +89,18 @@ fun Palette(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
                 cornerRadius = 2 * HYPER_LINE_THICKNESS,
                 style = HyperStyle.Rounded)
             .background(color = Color(0xFFCCCCCC))
-            .padding(12.dp)
     ) {
-        content()
+        AnimatedVisibility(visible = expanded,
+            enter = enterAnim,
+            exit = exitAnim,
+        ) {
+            Box(modifier = Modifier.padding(12.dp)) {
+                content()
+            }
+        }
+        Box(Modifier.clickable { expanded = !expanded }) {
+            Text("(X)")
+        }
     }
 }
 
