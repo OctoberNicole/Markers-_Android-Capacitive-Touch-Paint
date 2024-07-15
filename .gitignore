@@ -8,3 +8,5 @@ gen
 phone/src/main/bin
 wear/src/main/bin
 common/src/main/bin
+.idea
+out
