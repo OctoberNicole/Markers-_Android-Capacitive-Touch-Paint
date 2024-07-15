@@ -28,7 +28,6 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.*;
 import android.net.Uri;
@@ -50,6 +49,12 @@ import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import org.dsandler.apps.markers.R;
 
@@ -87,6 +92,7 @@ public class MarkersActivity extends Activity
     private Dialog mMenuDialog;
 
     private SharedPreferences mPrefs;
+    private WindowInsetsControllerCompat mWindowInsetsController;
 
     public static class ColorList extends LinearLayout {
         public ColorList(Context c, AttributeSet as) {
@@ -144,15 +150,27 @@ public class MarkersActivity extends Activity
     @Override
     public void onCreate(Bundle icicle)
     {
-        super.onCreate(icicle);
-
         final Window win = getWindow();
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
         lp.copyFrom(win.getAttributes());
         lp.format = PixelFormat.RGBA_8888;
-        win.setBackgroundDrawableResource(R.drawable.transparent);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        }
         win.setAttributes(lp);
         win.requestFeature(Window.FEATURE_NO_TITLE);
+
+        // force edge-to-edge
+        WindowCompat.setDecorFitsSystemWindows(win, false);
+
+        mWindowInsetsController =
+                WindowCompat.getInsetsController(win, win.getDecorView());
+
+        // Absorb the first swipe on a system bar edge without activating that function.
+        // This helps us avoid swiping up to go home too easily.
+        mWindowInsetsController.setSystemBarsBehavior(
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        );
 
         setContentView(R.layout.main);
         mSlate = (Slate) getLastNonConfigurationInstance();
@@ -187,15 +205,23 @@ public class MarkersActivity extends Activity
         mColorsView = findViewById(R.id.colors);
         mLogoView = findViewById(R.id.logo);
 
-        DecorTracker dt = DecorTracker.get();
-        dt.addInsettableView(mLogoView);
-        dt.addInsettableView(mActionBarView);
-        if (mComboHudView != null) {
-            dt.addInsettableView(mComboHudView);
-        } else {
-            dt.addInsettableView(mToolsView);
-            dt.addInsettableView(mColorsView);
-        }
+        ViewCompat.setOnApplyWindowInsetsListener(win.getDecorView(),
+                (view, windowInsets) -> {
+                    final boolean showHud = windowInsets.isVisible(WindowInsetsCompat.Type.navigationBars())
+                            || windowInsets.isVisible(WindowInsetsCompat.Type.statusBars());
+                    setHUDVisibility(showHud, true);
+
+                    final Insets insets = windowInsets.getInsetsIgnoringVisibility(
+                            WindowInsetsCompat.Type.systemBars());
+                    // New strategy for handling system bars: a single palette container view
+                    // holding everything. I think on some very old devices this had a performance
+                    // impact, but that doesn't seem to be the case anymore.
+                    root.findViewById(R.id.palettes).setPadding(
+                            insets.left, insets.top, insets.right, insets.bottom
+                    );
+
+                    return ViewCompat.onApplyWindowInsets(view, windowInsets);
+                });
 
         setupLayers(); // the HUD needs to have a software layer at all times
                        // so we can draw through it quickly
@@ -283,7 +309,7 @@ public class MarkersActivity extends Activity
         descend((ViewGroup) mColorsView, new ViewFunc() {
             @Override
             public void apply(View v) {
-                final ToolButton.SwatchButton swatch = (ToolButton.SwatchButton) v;
+                final SwatchButton swatch = (SwatchButton) v;
                 if (swatch != null) {
                     swatch.setCallback(mToolCB);
                 }
@@ -335,6 +361,8 @@ public class MarkersActivity extends Activity
         mActivePenType.click();
 
         // clickDebug(null); // auto-debug mode for testing devices
+
+        super.onCreate(icicle);
     }
 
     private void loadSettings() {
@@ -384,13 +412,6 @@ public class MarkersActivity extends Activity
     @Override
     public void onResume() {
         super.onResume();
-        
-        String orientation = getString(R.string.orientation);
-        
-        setRequestedOrientation(
-                "landscape".equals(orientation)
-                    ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                    : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     }
 
     @Override
@@ -478,25 +499,11 @@ public class MarkersActivity extends Activity
         return mActionBarView.getVisibility() == View.VISIBLE;
     }
 
-    @TargetApi(11)
     public void setHUDVisibility(boolean show, boolean animate) {
-        if (hasSystemUiFlags()) {
-            int flags = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
-
-            if (!show) {
-                flags |= View.SYSTEM_UI_FLAG_FULLSCREEN;
-            }
-
-            if (hasImmersive()) {
-                flags |= View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
-
-                if (!show) {
-                    flags |= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
-                }
-            }
-
-            mSlate.setSystemUiVisibility(flags);
+        if (show) {
+            mWindowInsetsController.show(WindowInsetsCompat.Type.systemBars());
+        } else {
+            mWindowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
         }
 
         final int actionBarHeight = mActionBarView.getHeight(); // use for animation distances

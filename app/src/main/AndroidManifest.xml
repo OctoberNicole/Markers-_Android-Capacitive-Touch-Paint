@@ -14,7 +14,7 @@
   limitations under the License.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    android:versionCode="02000000" android:versionName="2.0-PROTO">
+    android:versionCode="0" android:versionName="">
     <!-- uses-sdk is in gradle -->
 
     <!-- before runtime permissions, WRITE_EXTERNAL_STORAGE is all we need -->
@@ -26,8 +26,16 @@
     <!-- Support any Android device with a pointer -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
 
-    <application android:label="@string/app_name" android:icon="@drawable/launcher_icon" android:largeHeap="true" android:hardwareAccelerated="true">
-        <activity android:name="com.google.android.apps.markers.MarkersActivity" android:label="@string/app_name" android:configChanges="orientation|screenSize" android:exported="true">
+    <application android:label="@string/app_name"
+        android:icon="@drawable/launcher_icon"
+        android:largeHeap="true"
+        android:hardwareAccelerated="true"
+        android:resizeableActivity="true"
+        >
+        <activity android:name="com.google.android.apps.markers.MarkersActivity"
+            android:configChanges="orientation|screenSize|screenLayout|density"
+            android:label="${appName}"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -47,7 +55,8 @@
             android:theme="@style/Theme.Markers"
             android:documentLaunchMode="intoExisting"
             android:hardwareAccelerated="true"
-            android:exported="true">
+            android:exported="true"
+            android:enabled="${debug}">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

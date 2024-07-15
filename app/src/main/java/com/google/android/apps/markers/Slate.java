@@ -837,7 +837,7 @@ public class Slate extends View {
         if (mTiledCanvas != null) {
             canvas.save();
 
-            if (mPanX != 0 || mPanY != 0 || !mZoomMatrix.isIdentity()) {
+            if (mPanX != 0 || mPanY != 0 || !mZoomMatrix.isIdentity() || mTiledCanvas.getWidth() != getWidth()) {
                 canvas.translate(mPanX, mPanY);
                 canvas.concat(mZoomMatrix);
 
